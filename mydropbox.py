@@ -19,10 +19,16 @@ urllib3.disable_warnings()
 HOME = os.path.expanduser('~')
 
 
+class DropboxPathError(Exception):
+    """Raised if a given path doesn't exist in a Dropbox folder"""
+    pass
+
+
 class MyDropbox(object):
     def __init__(self, filepath=None, account_type=None, *args, **kwargs):
         self.filepath = filepath
         self._symlinked_path = os.path.join(HOME, 'Dropbox')
+        self._is_valid_path()
         self.account_type = account_type or self._get_account_type()
 
     @classmethod
@@ -150,11 +156,17 @@ Once you've received the auth code, return and enter it here
     # Private Methods #
     #################
 
-    def _is_symlinked_path(self):
+    def _is_in_dropbox_path(self):
         dropbox_paths = [account_info['path']
                          for _, account_info in self.get_dropbox_path().iteritems()]
-        if (not any(db_path in self.filepath for db_path in dropbox_paths)
-                and self._symlinked_path in self.filepath):
+        return any(db_path in self.filepath for db_path in dropbox_paths)
+
+    def _is_valid_path(self):
+        if not self._is_in_dropbox_path() and self._symlinked_path not in self.filepath:
+            raise DropboxPathError("%s is not in a Dropbox folder" % self.filepath)
+
+    def _is_symlinked_path(self):
+        if not self._is_in_dropbox_path() and self._symlinked_path in self.filepath:
             return True
         return False
 
