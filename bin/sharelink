@@ -1,0 +1,80 @@
+#!/usr/bin/python
+
+import os
+import stat
+import sys
+import argparse
+
+from mydropbox import MyDropbox
+
+home = os.path.expanduser('~')
+
+
+def strip(self, item):
+    return item.strip()
+
+
+class Inputs(argparse.Namespace):
+    def __init__(self, inputs):
+        self.filenames = inputs
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Share Dropbox Links",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('filenames', nargs="*",
+                        help="The files which you'd like to share. No flag needed.")
+    parser.add_argument('--ignore-errors', action="store_true",
+                        help="Ignores any errors when the file doesn't exist or isn't in Dropbox.")
+
+    return parser.parse_args()
+
+
+class ShareLink(object):
+    def __init__(self, args):
+        self.args = args
+
+    def print_ln(self, item, error=False):
+        if not (self.args.ignore_errors and error):
+            sys.stdout.write(item + "\n")
+
+    def get_dropbox_object(self, filepath):
+        return MyDropbox.get_by_filepath(filepath)
+
+    def main(self, inputs):
+        for input in inputs.filenames:
+            abspath = os.path.abspath(input)
+            if not os.path.exists(abspath):
+                self.print_ln("not a file", True)
+                continue
+            try:
+                dropbox = self.get_dropbox_object(abspath)
+            except:
+                self.print_ln("not in dropbox", True)
+                continue
+            shared_link = dropbox.share_link()
+            self.print_ln(shared_link.get("url"))
+
+
+if __name__ == '__main__':
+
+    mode = os.fstat(0).st_mode
+    if stat.S_ISFIFO(mode):
+        inputs = Inputs(map(strip, sys.stdin.readlines()))
+    elif stat.S_ISREG(mode):
+        inputs = Inputs(map(strip, sys.stdin.readlines()))
+    elif len(sys.argv) > 1:
+        inputs = parse_arguments()
+    else:
+        inputs = None
+    if not inputs:
+        sys.exit()
+
+    sharelink = ShareLink(inputs)
+
+    try:
+        sys.exit(sharelink.main(inputs))
+    except KeyboardInterrupt as e:
+        sharelink.print_ln("KeyboardInterrupt. Exiting...")
+        sys.exit()

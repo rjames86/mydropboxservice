@@ -26,6 +26,7 @@ class DropboxPathError(Exception):
 
 class MyDropbox(object):
     def __init__(self, filepath=None, account_type=None, *args, **kwargs):
+        self.APP_KEY, self.APP_SECRET = self._get_key_secret()
         self.filepath = filepath
         self._symlinked_path = os.path.join(HOME, 'Dropbox', '')
         self._is_valid_path()
@@ -119,13 +120,13 @@ Once you've received the auth code, return and enter it here
     @staticmethod
     def get_auth_url():
         flow = client.DropboxOAuth2FlowNoRedirect(
-            APP_KEY, APP_SECRET)
+            self.APP_KEY, self.APP_SECRET)
         return flow.start()
 
     @staticmethod
     def authorize(auth_code):
         flow = client.DropboxOAuth2FlowNoRedirect(
-            APP_KEY, APP_SECRET)
+            self.APP_KEY, self.APP_SECRET)
         try:
             access_token, user_id = flow.finish(auth_code)
 
@@ -195,6 +196,21 @@ Once you've received the auth code, return and enter it here
                 "No password found for {}, {}".format(
                     account_type, self.filepath)
             )
+
+    def _add_key_and_secret(self):
+        print "\n\nLooks like you haven't saved your app key and secret yet. \n\n"
+        app_key = raw_input("Enter your Dropbox app key: ").strip()
+        app_secret = raw_input("Enter your Dropbox app secret: ").strip()
+        MyDropbox.keychain().save_password('dropbox_app_key', app_key)
+        MyDropbox.keychain().save_password('dropbox_app_secret', app_secret)
+        print "App key and secret successfully saved!"
+
+    def _get_key_secret(self):
+        try:
+            return map(MyDropbox.keychain().get_password, ['dropbox_app_key', 'dropbox_app_secret'])
+        except PasswordNotFound:
+            self._add_key_and_secret()
+            return self._get_key_secret()
 
 """
 Credit for keychain helpers goes to deanishe from alfred-workflow
