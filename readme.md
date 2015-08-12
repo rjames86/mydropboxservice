@@ -10,7 +10,11 @@ In `.bash_profile` I add the following to allow me to import this within a pytho
 
 	export PYTHONPATH=$PYTHONPATH:"$HOME/Dropbox/bin/python_modules"
 
-Be sure to update `APP_KEY` and `APP_SECRET` within the `MyDropbox` class.
+Create a settings file
+
+    cp settings.py{.example,}
+
+and update `APP_KEY` and `APP_SECRET` within the `settings.py`
 
 ## Linking Your Dropbox Account ##
 
