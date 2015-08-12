@@ -22,6 +22,7 @@ HOME = os.path.expanduser('~')
 class MyDropbox(object):
     def __init__(self, filepath=None, account_type=None, *args, **kwargs):
         self.filepath = filepath
+        self._symlinked_path = os.path.join(HOME, 'Dropbox')
         self.account_type = account_type or self._get_account_type()
 
     @classmethod
@@ -38,6 +39,8 @@ class MyDropbox(object):
 
     @property
     def dropbox_folder(self):
+        if self._is_symlinked_path:
+            return self._symlinked_path
         return self.get_dropbox_path(self.account_type)['path']
 
     @staticmethod
@@ -147,16 +150,20 @@ Once you've received the auth code, return and enter it here
     # Private Methods #
     #################
 
-    def _get_account_type(self):
-        file_to_check = self.filepath
-        symlinked_path = os.path.join(HOME, 'Dropbox')
+    def _is_symlinked_path(self):
         dropbox_paths = [account_info['path']
                          for _, account_info in self.get_dropbox_path().iteritems()]
         if (not any(db_path in self.filepath for db_path in dropbox_paths)
-                and symlinked_path in self.filepath):
+                and self._symlinked_path in self.filepath):
+            return True
+        return False
+
+    def _get_account_type(self):
+        file_to_check = self.filepath
+        if self._is_symlinked_path():
             file_to_check = self.filepath.replace(
-                symlinked_path,
-                os.path.abspath(os.readlink(symlinked_path))
+                self._symlinked_path,
+                os.path.abspath(os.readlink(self._symlinked_path))
             )
         for account_type, info in self.get_dropbox_path().iteritems():
             if info['path'] in file_to_check:
@@ -165,11 +172,6 @@ Once you've received the auth code, return and enter it here
     def _relative_path(self):
         dropbox_folder = self._which_dropbox_folder()
         return self.filepath.replace(dropbox_folder, '')
-
-    def _which_dropbox_folder(self):
-        for account_type, info in self.get_dropbox_path().iteritems():
-            if info['path'] in self.filepath:
-                return info['path']
 
     def _get_access_token(self, account_type):
         tokens = json.loads(
