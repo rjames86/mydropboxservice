@@ -148,8 +148,18 @@ Once you've received the auth code, return and enter it here
     #################
 
     def _get_account_type(self):
+        file_to_check = self.filepath
+        symlinked_path = os.path.join(HOME, 'Dropbox')
+        dropbox_paths = [account_info['path']
+                         for _, account_info in self.get_dropbox_path().iteritems()]
+        if (not any(db_path in self.filepath for db_path in dropbox_paths)
+                and symlinked_path in self.filepath):
+            file_to_check = self.filepath.replace(
+                symlinked_path,
+                os.path.abspath(os.readlink(symlinked_path))
+            )
         for account_type, info in self.get_dropbox_path().iteritems():
-            if info['path'] in self.filepath:
+            if info['path'] in file_to_check:
                 return account_type
 
     def _relative_path(self):
