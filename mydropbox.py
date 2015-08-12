@@ -27,7 +27,7 @@ class DropboxPathError(Exception):
 class MyDropbox(object):
     def __init__(self, filepath=None, account_type=None, *args, **kwargs):
         self.filepath = filepath
-        self._symlinked_path = os.path.join(HOME, 'Dropbox')
+        self._symlinked_path = os.path.join(HOME, 'Dropbox', '')
         self._is_valid_path()
         self.account_type = account_type or self._get_account_type()
 
@@ -45,7 +45,7 @@ class MyDropbox(object):
 
     @property
     def dropbox_folder(self):
-        if self._is_symlinked_path:
+        if self._is_symlinked_path():
             return self._symlinked_path
         return self.get_dropbox_path(self.account_type)['path']
 
@@ -69,7 +69,7 @@ class MyDropbox(object):
 
     def share_link(self, path=None, short_url=False, *args, **kwargs):
         if not path:
-            path = self.filename
+            path = self.dropbox_filepath
         dbclient = self.get_client()
 
         path = "/shares/%s%s" % (dbclient.session.root, format_path(path))
@@ -175,7 +175,7 @@ Once you've received the auth code, return and enter it here
         if self._is_symlinked_path():
             file_to_check = self.filepath.replace(
                 self._symlinked_path,
-                os.path.abspath(os.readlink(self._symlinked_path))
+                os.path.abspath(os.readlink(os.path.normpath(self._symlinked_path)))
             )
         for account_type, info in self.get_dropbox_path().iteritems():
             if info['path'] in file_to_check:
